@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2023 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.example.lunchtray
 
 import androidx.annotation.StringRes
@@ -40,12 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.lunchtray.datasource.DataSource
-import com.example.lunchtray.ui.AccompanimentMenuScreen
-import com.example.lunchtray.ui.CheckoutScreen
-import com.example.lunchtray.ui.EntreeMenuScreen
-import com.example.lunchtray.ui.OrderViewModel
-import com.example.lunchtray.ui.SideDishMenuScreen
-import com.example.lunchtray.ui.StartOrderScreen
+import com.example.lunchtray.ui.*
 
 enum class LunchTrayScreen(@StringRes val title: Int) {
     Start(title = R.string.app_name),
@@ -55,9 +35,7 @@ enum class LunchTrayScreen(@StringRes val title: Int) {
     Checkout(title = R.string.order_checkout)
 }
 
-/**
- * Composable that displays the topBar and displays back button if back navigation is possible.
- */
+// TopBar composable for all screens
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LunchTrayAppBar(
@@ -67,7 +45,7 @@ fun LunchTrayAppBar(
     modifier: Modifier = Modifier
 ) {
     CenterAlignedTopAppBar(
-        title = { Text(stringResource(currentScreenTitle)) },
+        title = { Text(text = stringResource(id = currentScreenTitle)) },
         modifier = modifier,
         navigationIcon = {
             if (canNavigateBack) {
@@ -84,40 +62,40 @@ fun LunchTrayAppBar(
 
 @Composable
 fun LunchTrayApp() {
-    //Create NavController
-    val navController = rememberNavController()
-    // Get current back stack entry
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    // Get the name of the current screen
+    // Navigation controller
+    val navCtrl = rememberNavController()
+    val backStack by navCtrl.currentBackStackEntryAsState()
+
+    // Identify current screen
     val currentScreen = LunchTrayScreen.valueOf(
-        backStackEntry?.destination?.route ?: LunchTrayScreen.Start.name
+        backStack?.destination?.route ?: LunchTrayScreen.Start.name
     )
-    // Create ViewModel
+
+    // ViewModel for order state
     val viewModel: OrderViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             LunchTrayAppBar(
                 currentScreenTitle = currentScreen.title,
-                canNavigateBack = navController.previousBackStackEntry != null,
-                navigateUp = { navController.navigateUp() }
+                canNavigateBack = navCtrl.previousBackStackEntry != null,
+                navigateUp = { navCtrl.navigateUp() }
             )
         }
-    ) { innerPadding ->
-        val uiState by viewModel.uiState.collectAsState()
+    ) { contentPadding ->
 
         NavHost(
-            navController = navController,
+            navController = navCtrl,
             startDestination = LunchTrayScreen.Start.name,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(contentPadding)
         ) {
             composable(route = LunchTrayScreen.Start.name) {
                 StartOrderScreen(
                     onStartOrderButtonClicked = {
-                        navController.navigate(LunchTrayScreen.Entree.name)
+                        navCtrl.navigate(LunchTrayScreen.Entree.name)
                     },
-                    modifier = Modifier
-                        .fillMaxSize()
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -126,16 +104,15 @@ fun LunchTrayApp() {
                     options = DataSource.entreeMenuItems,
                     onCancelButtonClicked = {
                         viewModel.resetOrder()
-                        navController.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
+                        navCtrl.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
                     },
                     onNextButtonClicked = {
-                        navController.navigate(LunchTrayScreen.SideDish.name)
+                        navCtrl.navigate(LunchTrayScreen.SideDish.name)
                     },
                     onSelectionChanged = { item ->
                         viewModel.updateEntree(item)
                     },
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 )
             }
 
@@ -144,16 +121,15 @@ fun LunchTrayApp() {
                     options = DataSource.sideDishMenuItems,
                     onCancelButtonClicked = {
                         viewModel.resetOrder()
-                        navController.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
+                        navCtrl.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
                     },
                     onNextButtonClicked = {
-                        navController.navigate(LunchTrayScreen.Accompaniment.name)
+                        navCtrl.navigate(LunchTrayScreen.Accompaniment.name)
                     },
                     onSelectionChanged = { item ->
                         viewModel.updateSideDish(item)
                     },
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 )
             }
 
@@ -162,16 +138,15 @@ fun LunchTrayApp() {
                     options = DataSource.accompanimentMenuItems,
                     onCancelButtonClicked = {
                         viewModel.resetOrder()
-                        navController.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
+                        navCtrl.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
                     },
                     onNextButtonClicked = {
-                        navController.navigate(LunchTrayScreen.Checkout.name)
+                        navCtrl.navigate(LunchTrayScreen.Checkout.name)
                     },
                     onSelectionChanged = { item ->
                         viewModel.updateAccompaniment(item)
                     },
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 )
             }
 
@@ -180,17 +155,17 @@ fun LunchTrayApp() {
                     orderUiState = uiState,
                     onCancelButtonClicked = {
                         viewModel.resetOrder()
-                        navController.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
+                        navCtrl.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
                     },
                     onNextButtonClicked = {
                         viewModel.resetOrder()
-                        navController.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
+                        navCtrl.popBackStack(LunchTrayScreen.Start.name, inclusive = false)
                     },
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
                         .padding(
                             start = dimensionResource(R.dimen.padding_medium),
-                            end = dimensionResource(R.dimen.padding_medium),
+                            end = dimensionResource(R.dimen.padding_medium)
                         )
                 )
             }
